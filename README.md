@@ -77,7 +77,9 @@ Your key is stored securely on your local machine.
    - Errors show a dialog with a simple message and optional detailed traceback.
 6. **Export**:
    - All parsed CV rows are combined into a DataFrame and saved to an Excel file.
-   - You can choose the filename, and the app will open or notify you when done.
+   - The app automatically generates a filename based on the source PDF and timestamp.
+   - When processing is complete, a dialog appears asking if you want to open the file.
+   - The Excel file is saved in the same directory as the input PDF.
 
 ### Code Highlights
 - `cv_processor_app.py`: Main window and UI logic
