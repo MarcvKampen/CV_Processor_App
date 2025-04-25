@@ -377,12 +377,9 @@ class CVProcessorApp(QMainWindow):
         header.addStretch()
         main_layout.addLayout(header)
         
-        # Create content layout with two columns
-        content = QHBoxLayout()
-        
-        # Left column for inputs
-        left_column = QVBoxLayout()
-        left_column.setSpacing(8)
+        # Create content layout
+        content = QVBoxLayout()
+        content.setSpacing(10)
         
         # API Key section
         api_section = QGroupBox("API Configuration")
@@ -456,7 +453,7 @@ class CVProcessorApp(QMainWindow):
         save_btn.clicked.connect(self.save_api_key)
         api_layout.addWidget(save_btn, 0, 2)
         
-        left_column.addWidget(api_section)
+        content.addWidget(api_section)
         
         # File selection section
         file_section = QGroupBox("Document Selection")
@@ -658,84 +655,7 @@ class CVProcessorApp(QMainWindow):
         self.jfws_combo.addItems(jfws_list)
         file_layout.addWidget(self.jfws_combo, 2, 1, 1, 2)
         
-        left_column.addWidget(file_section)
-        
-        # Action buttons 
-        action_layout = QHBoxLayout()
-        action_layout.setSpacing(8)  # Further reduced spacing
-        action_layout.setContentsMargins(0, 5, 0, 5)  # Minimal vertical padding
-        
-        self.process_button = QPushButton("Process CV File")
-        self.process_button.setMinimumHeight(36)  # Even smaller height
-        self.process_button.setMinimumWidth(140)  # Smaller width
-        self.process_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.process_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['accent']};
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: bold;
-                font-size: 13px;
-                letter-spacing: 0.5px;
-            }}
-            QPushButton:hover {{
-                background-color: #0D9488;
-            }}
-            QPushButton:pressed {{
-                background-color: #047857;
-            }}
-            QPushButton:disabled {{
-                background-color: #9CA3AF;
-                color: white;
-            }}
-        """)
-        self.process_button.setEnabled(False)
-        self.process_button.clicked.connect(self.process_file)
-        
-        self.cancel_button = QPushButton("Cancel")
-        self.cancel_button.setMinimumHeight(36)  # Even smaller height
-        self.cancel_button.setMinimumWidth(80)  # Smaller width
-        self.cancel_button.setCursor(Qt.CursorShape.PointingHandCursor)
-        self.cancel_button.setStyleSheet(f"""
-            QPushButton {{
-                background-color: white;
-                color: {COLORS['dark']};
-                border: 2px solid {COLORS['light']};
-                border-radius: 6px;
-                padding: 6px 12px;
-                font-weight: bold;
-                font-size: 13px;
-            }}
-            QPushButton:hover {{
-                background-color: #F3F4F6;
-                border-color: #D1D5DB;
-            }}
-            QPushButton:pressed {{
-                background-color: #E5E7EB;
-            }}
-            QPushButton:disabled {{
-                background-color: #E5E7EB;
-                color: #6B7280;
-                border-color: #D1D5DB;
-            }}
-        """)
-        self.cancel_button.setEnabled(False)
-        self.cancel_button.clicked.connect(self.cancel_processing)
-        
-        # Center the buttons for better appearance
-        action_layout.addStretch(1)  # Add stretch before buttons
-        action_layout.addWidget(self.process_button)
-        action_layout.addWidget(self.cancel_button)
-        action_layout.addStretch(1)  # Add stretch after buttons
-        
-        left_column.addLayout(action_layout)
-        left_column.addStretch()
-        
-        # Right column for progress and logs
-        right_column = QVBoxLayout()
-        right_column.setSpacing(8)
+        content.addWidget(file_section)
         
         # Progress section
         progress_section = QGroupBox("Progress")
@@ -796,87 +716,83 @@ class CVProcessorApp(QMainWindow):
         self.progress_detail.setWordWrap(True)  # Allow text wrapping for long messages
         progress_layout.addWidget(self.progress_detail)
         
-        right_column.addWidget(progress_section)
+        content.addWidget(progress_section)
         
-        # Log section
-        log_section = QGroupBox("Log")
-        log_section.setStyleSheet(f"""
-            QGroupBox {{
-                background-color: white;
-                border: 1px solid {COLORS['light']};
-                border-radius: 8px;
-                margin-top: 0.8em;
-                padding: 15px;
-                font-weight: bold;
-                color: {COLORS['primary']};
-            }}
-            QGroupBox::title {{
-                subcontrol-origin: margin;
-                left: 10px;
-                padding: 0 8px;
-                font-size: 13px;
-            }}
-        """)
-        log_layout = QVBoxLayout(log_section)
-        log_layout.setContentsMargins(10, 15, 10, 10)  # Further reduced padding
-        log_layout.setSpacing(8)  # Further reduced spacing
+        # Action buttons 
+        action_layout = QHBoxLayout()
+        action_layout.setSpacing(8)  # Further reduced spacing
+        action_layout.setContentsMargins(0, 5, 0, 5)  # Minimal vertical padding
         
-        self.log_text = QTextEdit()
-        self.log_text.setReadOnly(True)
-        self.log_text.setMinimumHeight(120)  # Smaller height
-        self.log_text.setStyleSheet(f"""
-            QTextEdit {{
+        self.process_button = QPushButton("Process CV File")
+        self.process_button.setMinimumHeight(36)  # Even smaller height
+        self.process_button.setMinimumWidth(140)  # Smaller width
+        self.process_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.process_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: {COLORS['accent']};
+                color: white;
                 border: none;
                 border-radius: 6px;
-                background-color: {COLORS['light_bg']};
-                font-family: Consolas, Monaco, monospace;
-                font-size: 12px;
-                color: {COLORS['dark']};
-                padding: 10px;
-                line-height: 1.4;
-            }}
-        """)
-        font = QFont("Consolas", 12)
-        font.setStyleHint(QFont.StyleHint.Monospace)
-        self.log_text.setFont(font)
-        log_layout.addWidget(self.log_text)
-        
-        clear_log_layout = QHBoxLayout()
-        clear_log_layout.addStretch()
-        
-        clear_btn = QPushButton("Clear Log")
-        clear_btn.setMinimumHeight(24)  # Even smaller height
-        clear_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        clear_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['light']};
-                color: {COLORS['dark']};
-                border: none;
-                border-radius: 5px;
-                padding: 3px 12px;
+                padding: 6px 12px;
                 font-weight: bold;
-                font-size: 12px;
+                font-size: 13px;
+                letter-spacing: 0.5px;
             }}
             QPushButton:hover {{
-                background-color: #D1D5DB;
+                background-color: #0D9488;
             }}
             QPushButton:pressed {{
+                background-color: #047857;
+            }}
+            QPushButton:disabled {{
                 background-color: #9CA3AF;
                 color: white;
             }}
         """)
-        clear_btn.clicked.connect(self.clear_log)
-        clear_log_layout.addWidget(clear_btn)
+        self.process_button.setEnabled(False)
+        self.process_button.clicked.connect(self.process_file)
+
+        self.cancel_button = QPushButton("Cancel")
+        self.cancel_button.setMinimumHeight(36)  # Even smaller height
+        self.cancel_button.setMinimumWidth(80)  # Smaller width
+        self.cancel_button.setCursor(Qt.CursorShape.PointingHandCursor)
+        self.cancel_button.setStyleSheet(f"""
+            QPushButton {{
+                background-color: white;
+                color: {COLORS['dark']};
+                border: 2px solid {COLORS['light']};
+                border-radius: 6px;
+                padding: 6px 12px;
+                font-weight: bold;
+                font-size: 13px;
+            }}
+            QPushButton:hover {{
+                background-color: #F3F4F6;
+                border-color: #D1D5DB;
+            }}
+            QPushButton:pressed {{
+                background-color: #E5E7EB;
+            }}
+            QPushButton:disabled {{
+                background-color: #E5E7EB;
+                color: #6B7280;
+                border-color: #D1D5DB;
+            }}
+        """)
+        self.cancel_button.setEnabled(False)
+        self.cancel_button.clicked.connect(self.cancel_processing)
+
+        # Center the buttons for better appearance
+        action_layout.addStretch(1)  # Add stretch before buttons
+        action_layout.addWidget(self.process_button)
+        action_layout.addWidget(self.cancel_button)
+        action_layout.addStretch(1)  # Add stretch after buttons
         
-        log_layout.addLayout(clear_log_layout)
-        right_column.addWidget(log_section)
-        
-        # Add both columns to content
-        content.addLayout(left_column, 1)
-        content.addLayout(right_column, 1)  # Equal column widths
+        content.addLayout(action_layout)
+        content.addStretch()
         
         main_layout.addLayout(content)
-        
+
         # Set central widget
         self.setCentralWidget(main_container)
         
@@ -886,22 +802,12 @@ class CVProcessorApp(QMainWindow):
         if key:
             self.api_key = key
             self.settings.setValue("api_key", key)
-            self.log_success("API key saved.")
         else:
-            self.log_warning("API key cannot be empty.")
+            QMessageBox.warning(self, "API Key Error", "API key cannot be empty.")
 
     def select_file(self):
         """Open file dialog to select a PDF file"""
         file_dialog = QFileDialog()
-        # Styling for file dialog remains the same
-        file_dialog.setStyleSheet(f"""
-            QFileDialog {{ background-color: {COLORS['light_bg']}; }}
-            QFileDialog QListView, QFileDialog QTreeView {{ background-color: white; border: 1px solid {COLORS['light']}; border-radius: 4px; }}
-            QFileDialog QComboBox, QFileDialog QLineEdit {{ background-color: white; border: 1px solid {COLORS['light']}; border-radius: 4px; padding: 5px; }}
-            QFileDialog QPushButton {{ background-color: {COLORS['secondary']}; color: white; border: none; border-radius: 4px; padding: 5px 15px; font-weight: bold; }}
-            QFileDialog QPushButton:hover {{ background-color: {COLORS['primary']}; }}
-        """)
-
         file_path, _ = file_dialog.getOpenFileName(
             self, "Select CV PDF File", "", "PDF Files (*.pdf)"
         )
@@ -910,7 +816,6 @@ class CVProcessorApp(QMainWindow):
             self.pdf_file_path = Path(file_path)
             self.file_input.setText(self.pdf_file_path.name)
             self.process_button.setEnabled(True)
-            self.log(f"Selected file: {self.pdf_file_path.name}")
 
     def process_file(self):
         """Process the selected CSV file"""
@@ -921,19 +826,18 @@ class CVProcessorApp(QMainWindow):
         if not self.api_key:
             QMessageBox.warning(self, "Missing API Key", "Please set your API key first.")
             return
-        
+
         # Update UI state
         self.process_button.setEnabled(False)
         self.cancel_button.setEnabled(True)
         self.file_btn.setEnabled(False)
         self.progress_bar.show()
         self.progress_bar.setValue(0)
-        self.log("Starting CV processing...")
         
         # Get selected CV book source
         cv_book_source = self.cv_book_combo.currentText()
         jfws_source = self.jfws_combo.currentText()
-        
+
         # Start the OCR worker with proper parameters
         self.worker = OCRWorker(
             pdf_file=self.pdf_file_path,
@@ -955,126 +859,9 @@ class CVProcessorApp(QMainWindow):
         # Start the worker thread
         self.worker.start()
 
-    def show_export_dialog(self, results_df):
-        """Show a dialog to export results to Excel"""
-        # Create a styled export dialog
-        dialog = QDialog(self)
-        dialog.setWindowTitle("Export Results to Excel")
-        dialog.setMinimumWidth(500)
-        dialog.setStyleSheet(f"""
-            QDialog {{
-                background-color: {COLORS['light_bg']};
-                border-radius: 8px;
-            }}
-        """)
-        
-        layout = QVBoxLayout(dialog)
-        layout.setContentsMargins(20, 20, 20, 20)
-        layout.setSpacing(15)
-        
-        # Title
-        title = QLabel("Export Results")
-        title.setStyleSheet(f"""
-            font-size: 18px;
-            font-weight: bold;
-            color: {COLORS['primary']};
-            margin-bottom: 10px;
-        """)
-        layout.addWidget(title)
-        
-        # Message
-        message = QLabel("Your CV processing is complete. Would you like to export the results to Excel?")
-        message.setWordWrap(True)
-        message.setStyleSheet(f"color: {COLORS['dark']}; font-size: 14px;")
-        layout.addWidget(message)
-        
-        # Filename section
-        file_layout = QHBoxLayout()
-        file_layout.setSpacing(10)
-        
-        file_label = QLabel("Filename:")
-        file_label.setStyleSheet(f"color: {COLORS['dark']}; font-weight: bold;")
-        file_layout.addWidget(file_label)
-        
-        filename_input = QLineEdit("cv_results.xlsx")
-        filename_input.setStyleSheet(f"""
-            QLineEdit {{
-                border: 1px solid {COLORS['light']};
-                border-radius: 6px;
-                padding: 8px;
-                background-color: white;
-            }}
-            QLineEdit:focus {{
-                border: 1px solid {COLORS['secondary']};
-            }}
-        """)
-        file_layout.addWidget(filename_input)
-        
-        layout.addLayout(file_layout)
-        
-        # Buttons
-        button_layout = QHBoxLayout()
-        button_layout.addStretch()
-        
-        cancel_btn = QPushButton("Cancel")
-        cancel_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        cancel_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['light']};
-                color: {COLORS['dark']};
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #D1D5DB;
-            }}
-        """)
-        cancel_btn.clicked.connect(dialog.reject)
-        
-        export_btn = QPushButton("Export")
-        export_btn.setCursor(Qt.CursorShape.PointingHandCursor)
-        export_btn.setStyleSheet(f"""
-            QPushButton {{
-                background-color: {COLORS['accent']};
-                color: white;
-                border: none;
-                border-radius: 6px;
-                padding: 10px 20px;
-                font-weight: bold;
-            }}
-            QPushButton:hover {{
-                background-color: #0D9488;
-            }}
-        """)
-        export_btn.clicked.connect(dialog.accept)
-        
-        button_layout.addWidget(cancel_btn)
-        button_layout.addWidget(export_btn)
-        layout.addLayout(button_layout)
-        
-        # Show dialog and handle result
-        if dialog.exec():
-            filename = filename_input.text()
-            if not filename.endswith('.xlsx'):
-                filename += '.xlsx'
-            
-            try:
-                # Export to the selected path
-                path = os.path.join(os.path.dirname(self.file_input.text()), filename)
-                export_to_excel(results_df, path)
-                self.log(f"Results exported to {path}")
-                QMessageBox.information(self, "Export Complete", f"Results exported to {path}")
-            except Exception as e:
-                self.log(f"Error exporting results: {str(e)}")
-                QMessageBox.critical(self, "Export Error", f"Failed to export results: {str(e)}")
-
     def update_progress(self, progress_message):
         """Update the progress detail text"""
         self.progress_detail.setText(progress_message)
-        # Also log the message
-        self.log(progress_message)
         
     def update_progress_percentage(self, current, total):
         """Update the progress bar with new values"""
@@ -1110,17 +897,16 @@ class CVProcessorApp(QMainWindow):
             friendly_stage = stage_map[stage]
             
         self.progress_stage.setText(friendly_stage)
-        self.log_success(f"=== {friendly_stage} ===")
         
     def on_file_saved(self, file_path):
         """Handle notification that a file was saved"""
-        self.log_success(f"File saved: {file_path}")
-
+        pass  # No logging needed
+    
     def toggle_ui(self, enabled):
         """Toggle UI elements enabled/disabled state"""
         # Main controls
         self.file_btn.setEnabled(enabled)
-        self.process_button.setEnabled(enabled and getattr(self, 'pdf_file_path', None) is not None)
+        self.process_button.setEnabled(enabled and hasattr(self, 'pdf_file_path'))
         self.cv_book_combo.setEnabled(enabled)
         self.jfws_combo.setEnabled(enabled)
         
@@ -1135,113 +921,8 @@ class CVProcessorApp(QMainWindow):
         else:
             self.progress_bar.show()
 
-    # --- log, log_success, log_error, log_warning, toggle_ui remain the same ---
-    def log(self, message):
-        """Add a normal log message with more human-friendly formatting"""
-        # Handle multi-line messages
-        message = str(message).strip()
-        
-        # Make certain technical messages more user-friendly
-        friendly_message = self._make_message_user_friendly(message)
-        
-        if '\n' in friendly_message:
-            for line in friendly_message.split('\n'):
-                if line.strip():  # Skip empty lines
-                    self.log_text.append(f'<span style="color: {COLORS["dark"]};">{line}</span>')
-        else:
-            self.log_text.append(f'<span style="color: {COLORS["dark"]};">{friendly_message}</span>')
-        # Auto-scroll to the bottom
-        self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-        
-    def _make_message_user_friendly(self, message):
-        """Convert technical messages to more human-friendly format"""
-        # Convert chunk processing messages
-        if "Chunk" in message and "/" in message:
-            try:
-                # Extract chunk numbers
-                chunk_match = re.search(r"[Cc]hunk (\d+)/(\d+)", message)
-                if chunk_match:
-                    current = int(chunk_match.group(1))
-                    total = int(chunk_match.group(2))
-                    # Look for CV count if available
-                    cv_count = "some CVs"
-                    cv_match = re.search(r"(\d+) CVs", message)
-                    if cv_match:
-                        cv_count = f"{cv_match.group(1)} CVs"
-                    return f"Processing chunk {current} of {total} with {cv_count}..."
-            except:
-                # If parsing fails, return the original message
-                pass
-                
-        # Extract page information
-        if "pages" in message.lower():
-            page_match = re.search(r"(\d+) pages", message)
-            if page_match:
-                pages = page_match.group(1)
-                return f"PDF has {pages} pages to process"
-                
-        # Make extraction messages clearer
-        if "text extracted" in message.lower() or "extracted text" in message.lower():
-            return f"Successfully extracted text from pages"
-            
-        # Handle processing stages
-        if "analyzing" in message.lower():
-            return "Analyzing CV content..."
-            
-        # Handle completion messages
-        if "complete" in message.lower() and "excel" in message.lower():
-            return "Results successfully saved to Excel file"
-            
-        # Check for API or processing errors
-        if "error" in message.lower():
-            if "api" in message.lower():
-                return "Error connecting to AI service. Please check your API key."
-            else:
-                return "An error occurred during processing. Please try again."
-                
-        # Return the original message if no pattern matches
-        return message
-
-    def log_success(self, message):
-        """Add a success (green) log message"""
-        message = str(message).strip()
-        if '\n' in message:
-            for line in message.split('\n'):
-                if line.strip():
-                    self.log_text.append(f'<span style="color: {COLORS["success"]}; font-weight: bold;">{line}</span>')
-        else:
-            self.log_text.append(f'<span style="color: {COLORS["success"]}; font-weight: bold;">{message}</span>')
-        self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-
-    def log_error(self, message):
-        """Add an error (red) log message"""
-        message = str(message).strip()
-        if '\n' in message:
-            for line in message.split('\n'):
-                if line.strip():
-                    self.log_text.append(f'<span style="color: {COLORS["error"]}; font-weight: bold;">{line}</span>')
-        else:
-            self.log_text.append(f'<span style="color: {COLORS["error"]}; font-weight: bold;">{message}</span>')
-        self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-
-    def log_warning(self, message):
-        """Add a warning (orange) log message"""
-        message = str(message).strip()
-        if '\n' in message:
-            for line in message.split('\n'):
-                if line.strip():
-                    self.log_text.append(f'<span style="color: {COLORS["warning"]}; font-weight: bold;">{line}</span>')
-        else:
-            self.log_text.append(f'<span style="color: {COLORS["warning"]}; font-weight: bold;">{message}</span>')
-        self.log_text.verticalScrollBar().setValue(self.log_text.verticalScrollBar().maximum())
-        
-    def clear_log(self):
-        """Clear the log display"""
-        self.log_text.clear()
-        self.log("Log cleared.")
-
     def on_processing_finished(self, message):
-        self.log_success(message)
+        """Handle completion of processing"""
         self.toggle_ui(True)
 
         # Extract the file path from the message
@@ -1252,19 +933,15 @@ class CVProcessorApp(QMainWindow):
             file_path = message.split("saved to: ")[-1].strip()
             
         if not file_path or not os.path.exists(file_path):
-            self.log_warning("Could not determine the output file path from the message.")
+            QMessageBox.warning(self, "Warning", "Could not determine the output file path from the message.")
             file_path = ""
-
-        # Remove batch info
-        batch_info = ""
 
         msgBox = QMessageBox(self)
         msgBox.setWindowTitle('Processing Complete')
-        msgBox.setText(f"Processing completed successfully!{batch_info}")
+        msgBox.setText("Processing completed successfully!")
         
         if file_path:
             msgBox.setInformativeText("Would you like to open the Excel file?")
-            # Remove batch file reference
             msgBox.setDetailedText(f"File: {file_path}")
         else:
             msgBox.setInformativeText("The data has been processed, but the file path could not be determined.")
@@ -1291,25 +968,27 @@ class CVProcessorApp(QMainWindow):
                     else: # Linux
                         subprocess.call(('xdg-open', file_path))
                 except Exception as e:
-                    self.log_error(f"Could not open file '{file_path}': {e}")
-                    QMessageBox.warning(self, "Open File Error", f"Could not automatically open the file:\n{file_path}\n\nPlease open it manually.\nError: {e}")
+                    QMessageBox.warning(self, "Open File Error", 
+                                       f"Could not automatically open the file:\n{file_path}\n\nPlease open it manually.\nError: {e}")
         else:
             close_button = msgBox.addButton("Close", QMessageBox.ButtonRole.NoRole)
             msgBox.exec()
 
     def on_processing_error(self, error_message):
-        self.log_error(f"ERROR: {error_message}")
+        """Handle error during processing"""
         self.toggle_ui(True)
 
         error_box = QMessageBox(self)
         error_box.setWindowTitle('Processing Error')
         error_box.setText("An error occurred during CV processing.")
+        
         # Use setDetailedText for long tracebacks if needed, keep InformativeText short
         if len(error_message) > 300:
              error_box.setInformativeText(error_message[:300] + "...")
              error_box.setDetailedText(error_message)
         else:
             error_box.setInformativeText(error_message)
+            
         error_box.setIcon(QMessageBox.Icon.Critical)
         error_box.setStyleSheet(f"""
             QMessageBox {{ background-color: white; }}
@@ -1331,7 +1010,6 @@ class CVProcessorApp(QMainWindow):
             )
             
             if reply == QMessageBox.StandardButton.Yes:
-                self.log_warning("Cancelling processing...")
                 self.worker.cancel()
                 self.progress_stage.setText("Cancelling...")
                 self.progress_detail.setText("Waiting for operations to complete safely...")
@@ -1494,13 +1172,6 @@ def set_application_style(app):
         QScrollBar::add-line, QScrollBar::sub-line {{
             height: 0px;
         }}
-        
-        QTextEdit {{
-            border: 1px solid {COLORS['light']};
-            border-radius: 6px;
-            padding: 8px;
-            background-color: white;
-        }}
     """)
 
 if __name__ == "__main__":
@@ -1522,8 +1193,6 @@ if __name__ == "__main__":
         try:
             app.setAttribute(Qt.ApplicationAttribute.AA_UseHighDpiPixmaps)
             app.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
-            # QtWinExtras has been removed in PyQt6
-            # Instead we rely on the built-in Windows 10+ styling
         except Exception as e:
             print(f"Could not set high DPI settings: {e}")
     

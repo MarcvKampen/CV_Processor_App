@@ -13,14 +13,14 @@ def get_dynamic_prompt():
 
 IMPORTANT INSTRUCTIONS:
 - Process each CV separately, identifying clear boundaries between different individuals.
-- For each person, extract EXACTLY the 9 fields specified below.
+- For each person, extract EXACTLY the 10 fields specified below.
 - Double-check all extracted information for accuracy.
 - Only include information that appears at least twice in the document or has strong supporting evidence.
 - If information cannot be verified with high confidence or values don't match across checks, use "N/A" instead of guessing.
 - Return data in a structured JSON array format, with one object per person.
 - Do NOT include any explanatory text, headers, or additional formatting beyond valid JSON.
 
-EXTRACTION FIELDS (9 required fields):
+EXTRACTION FIELDS (10 required fields):
 
 1. FIRST_NAME
    - Extract only the given/first name.
@@ -174,6 +174,41 @@ EXTRACTION FIELDS (9 required fields):
      - Wefynd: https://wefynd.com/profile/username
      - Personal Website: https://www.username.com
 
+10. POTENTIAL_INTEREST
+   - You must categorize each candidate into EXACTLY ONE of these SIX categories:
+     * "Management"
+     * "Sustainability"
+     * "Data"
+     * "Finance"
+     * "IT/AI"
+     * "Supply Chain"
+   - Base your classification on a comprehensive analysis of:
+     * Academic degrees and educational focus
+     * Work experience and internships
+     * Hard skills listed in the CV
+     * Soft skills that indicate specific interests
+     * Projects, thesis topics, or research interests
+     * Extracurricular activities, volunteer work
+     * Stated career goals or objectives
+   - Classification Guidelines:
+     * "Management": Leadership roles, project management, business administration, organizational skills, team coordination, HR activities
+     * "Sustainability": Environmental studies, renewable energy, CSR activities, climate-related projects, circular economy, eco-friendly initiatives 
+     * "Data": Data analysis, statistics, mathematics, data visualization, research methodology, market research, business intelligence, programming languages, software development, digital transformation, artificial intelligence, machine learning, tech projects
+     * "Finance": Accounting, investment activities, banking experience, financial planning, risk assessment, budget management, financial modeling, investment banking, asset management, insurance, risk management
+     * "IT/AI": Programming languages, software development, digital transformation, artificial intelligence, machine learning, tech projects, data science, data engineering, data analysis, data visualization, research methodology, market research, business intelligence
+     * "Supply Chain": Logistics, operations, procurement, inventory management, distribution, manufacturing processes, global trade, supply chain management, supply chain optimization, supply chain logistics, supply chain planning, supply chain coordination, supply chain integration, supply chain risk management, supply chain sustainability, supply chain innovation, supply chain optimization, supply chain coordination, supply chain integration, supply chain risk management, supply chain sustainability, supply chain innovation
+    Since Data and IT/AI are very similar, make sure to choose the category that best aligns with the candidate's interests and skills. Lean more towards Data if the candidate has a strong background in data analysis and programming. Otherwise, choose IT/AI if the candidate has a strong background in software development and artificial intelligence.
+     
+   - Decision Hierarchy:
+     * Prioritize explicit statements about career interests or goals
+     * Then consider actual work experience and internships
+     * Then analyze skills and technical knowledge
+     * Then evaluate educational background and specializations
+
+   - If there are multiple potential interests, choose the one with the strongest evidence.
+   - If there's insufficient evidence to make a determination, choose the category that best aligns with their faculty.
+   - Always select one of the six options - "N/A" is not acceptable for this field.
+
 SPECIAL CONTENT HANDLING:
 - MULTILINGUAL DOCUMENTS: Extract data in the document's primary language, then translate field values to English.
 - TABLES/CHARTS: Carefully examine for education history, work experience, or skill metrics.
@@ -211,7 +246,8 @@ Return data as a valid JSON array where each object represents one person with t
     "EXPECTED_GRADUATION_YEAR": "...",
     "FACULTY": "...",
     "NATIVE_LANGUAGE": "...",
-    "LINKEDIN_PROFILE_URL": "..."
+    "LINKEDIN_PROFILE_URL": "...",
+    "POTENTIAL_INTEREST": "..."
   }},
   {{
     "FIRST_NAME": "...",

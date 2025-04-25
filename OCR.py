@@ -709,7 +709,7 @@ def parse_json_response(response_text):
             normalized_cv = {}
             for field in ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER", 
                          "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR", 
-                         "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL"]:
+                         "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST"]:
                 # Get value, defaulting to N/A if missing
                 value = cv.get(field, "N/A")
                 # Normalize empty strings to N/A
@@ -763,7 +763,7 @@ def parse_json_response(response_text):
                     normalized_obj = {}
                     for field in ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER", 
                                  "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR", 
-                                 "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL"]:
+                                 "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST"]:
                         normalized_obj[field] = obj.get(field, "N/A")
                     normalized_objects.append(normalized_obj)
                 
@@ -788,7 +788,8 @@ def parse_json_response(response_text):
                             "EXPECTED_GRADUATION_YEAR": "N/A",
                             "FACULTY": "N/A",
                             "NATIVE_LANGUAGE": "N/A",
-                            "LINKEDIN_PROFILE_URL": "N/A"
+                            "LINKEDIN_PROFILE_URL": "N/A",
+                            "POTENTIAL_INTEREST": "N/A"
                         })
                 if minimal_objects:
                     print(f"Recovery succeeded with minimal objects: {len(minimal_objects)} entries")
@@ -858,7 +859,7 @@ def export_to_excel(cv_data, pdf_file, cv_book_source="", jfws_source="", mode="
         preferred_order = [
             "FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER",
             "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR", "FACULTY",
-            "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", 
+            "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST",
             "CV_SOURCE", "JFWS_SOURCE", "PDF_SOURCE"
         ]
         
@@ -936,49 +937,40 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
             print(f"Warning: Second run data is not a list or dict: {type(cv_data2).__name__}")
             cv_data2 = []
     
-    print(f"Run 1: {len(cv_data1)} CVs, Run 2: {len(cv_data2)} CVs")
+    # Create a mapping of CV data from run 2 for faster lookup
+    cv_data2_map = {}
     
-    # Create a lookup map for the second run using a match key
     def create_match_key(cv):
-        """Create a key for matching CVs across runs based on name and email"""
+        """Create a matching key for a CV entry"""
         if not isinstance(cv, dict):
             return None
             
-        # Get basic identifiers, normalized to lowercase
-        first = cv.get("FIRST_NAME", "").strip().lower()
-        last = cv.get("LAST_NAME", "").strip().lower() 
-        email = cv.get("EMAIL", "").strip().lower()
+        first_name = str(cv.get('FIRST_NAME', '')).strip().lower()
+        last_name = str(cv.get('LAST_NAME', '')).strip().lower()
         
-        # Create a composite key, prioritizing email if available
-        if email:
-            return f"{email}"
-        elif first and last:
-            return f"{first}_{last}"
-        else:
+        if not first_name and not last_name:
             return None
             
-    # Check for cancellation
-    if check_cancelled():
-        print("Processing cancelled during key creation")
-        return "Processing cancelled during merge"
-            
-    # Create lookup maps
-    cv_data2_map = {}
+        # Create key from name combination
+        return f"{first_name}|{last_name}"
+    
+    # Build lookup map for run 2 data
     for cv in cv_data2:
+        if not isinstance(cv, dict):
+            continue
+            
         key = create_match_key(cv)
         if key:
             cv_data2_map[key] = cv
-            
-    print(f"Created lookup map for Run 2 with {len(cv_data2_map)} unique keys")
     
-    # Initialize merged data and highlighting info
+    # Prepare merged data and highlighting info
     merged_data = []
-    highlighting = {}  # {merged_index: {field_name: True}}
+    highlighting = {}  # Maps row index to fields that should be highlighted
     processed_keys_from_run2 = set()
     
     # Check for cancellation
     if check_cancelled():
-        print("Processing cancelled before merging")
+        print("Processing cancelled during merge")
         return "Processing cancelled during merge"
     
     # Iterate through Run 1, merging with Run 2
@@ -1002,7 +994,7 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
             # Compare fields and merge/highlight
             for field in ["FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER",
                          "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR",
-                         "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL"]:
+                         "FACULTY", "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST"]:
                 value1 = cv1.get(field, "N/A")
                 value2 = cv2.get(field, "N/A")
                 
@@ -1017,109 +1009,115 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
                         # Keep value1 (already in merged_cv)
                     elif not norm_val1 and norm_val2:  # Fill from Run 2
                         print(f"Filling N/A for {key1}, Field '{field}' with Run2 value: '{value2}'")
-                        merged_cv[field] = value2  # Update merged dict
-                        highlighting[len(merged_data)][field] = True
-        else:
-            print(f"CV from Run 1 ({key1}) not found in Run 2")
-            # Keep cv1 as is
-            
-        merged_data.append(merged_cv)
+                        merged_cv[field] = value2  # Update merged data
         
-        # Check for cancellation occasionally during the merge
-        if i % 20 == 0 and check_cancelled():
-            print(f"Processing cancelled during merge (at CV {i})")
-            # Save what we've done so far
-            partial_file = export_to_excel_with_highlighting(
-                merged_data, highlighting, pdf_file, cv_book_source, jfws_source, "partial_merge")
-            return f"Processing cancelled during merge. Partial results saved to: {partial_file}"
+        # Add metadata
+        merged_cv["CV_SOURCE"] = cv_book_source
+        merged_cv["JFWS_SOURCE"] = jfws_source
+        merged_cv["PDF_SOURCE"] = pdf_file.stem
+        merged_cv["RUN"] = "1" if key1 not in cv_data2_map else "1+2"  # Track which runs found this CV
+        
+        merged_data.append(merged_cv)
+    
+    # Check for cancellation
+    if check_cancelled():
+        print("Processing cancelled during merge")
+        return "Processing cancelled during merge"
     
     # Add CVs found only in Run 2
     for key2, cv2 in cv_data2_map.items():
         if key2 not in processed_keys_from_run2:
-            print(f"Adding CV found only in Run 2: {key2}")
-            merged_data.append(cv2)
-            # Highlight the entire entry
-            highlighting[len(merged_data) - 1] = {field: True for field in cv2.keys() 
-                                                if field not in ["CV_SOURCE", "JFWS_SOURCE"]}
+            # Only found in Run 2
+            print(f"CV found only in Run 2: {key2}")
+            merged_cv = cv2.copy()
+            
+            # Add metadata
+            merged_cv["CV_SOURCE"] = cv_book_source
+            merged_cv["JFWS_SOURCE"] = jfws_source
+            merged_cv["PDF_SOURCE"] = pdf_file.stem
+            merged_cv["RUN"] = "2"  # Only found in Run 2
+            
+            merged_data.append(merged_cv)
     
-    print(f"Total merged CV entries: {len(merged_data)}")
+    # Check for empty results
+    if not merged_data:
+        print("Warning: No data after merging runs!")
+        return "Error: No data found after merging runs"
     
-    # Check for cancellation before exporting
-    if check_cancelled():
-        print("Processing cancelled before exporting merged results")
-        return "Processing cancelled before export"
-        
-    # Export the merged data with highlighting
-    return export_to_excel_with_highlighting(merged_data, highlighting, pdf_file, cv_book_source, jfws_source)
-
-
-def export_to_excel_with_highlighting(cv_data, highlighting, pdf_file, cv_book_source="", jfws_source="", mode="full"):
-    """
-    Export merged data to Excel with highlighting.
-    Saves results to the output folder using a PDF-specific filename.
-    """
-    print("Exporting merged data with highlighting...")
-    
-    # Create a file with the specific PDF name for reference and save to output folder
-    pdf_specific_file_name = f"{pdf_file.stem}_results_{datetime.now().strftime('%H%M%S')}_{mode}.xlsx"
+    # Create a file with the specific PDF name for reference
+    pdf_specific_file_name = f"{pdf_file.stem}_merged_results_{datetime.now().strftime('%H%M%S')}.xlsx"
     pdf_specific_file_path = OUTPUT_DIR / pdf_specific_file_name
     
-    # Create DataFrame
-    df = pd.DataFrame(cv_data)
-    
-    # Set column order
-    preferred_columns = [
-        "FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER",
-        "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR", "FACULTY",
-        "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL",
-        "CV_SOURCE", "JFWS_SOURCE", "PDF_SOURCE"
-    ]
-    
-    # Only include columns that exist
-    ordered_columns = [col for col in preferred_columns if col in df.columns]
-    
-    # Add any remaining columns
-    extra_columns = [col for col in df.columns if col not in preferred_columns]
-    ordered_columns.extend(extra_columns)
-    
-    # Reorder
-    if ordered_columns:
-        df = df[ordered_columns]
-    
-    # Apply highlighting using openpyxl for the PDF-specific file
     try:
-        from openpyxl import load_workbook
-        from openpyxl.styles import PatternFill, Font
+        # Convert to DataFrame
+        df = pd.DataFrame(merged_data)
         
-        # Create highlighting
-        highlight_fill = PatternFill(start_color="FFFF00", end_color="FFFF00", fill_type="solid")
-        workbook = load_workbook(pdf_specific_file_path)
-        sheet = workbook.active
+        # Reorder columns for better readability
+        preferred_order = [
+            "FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER",
+            "EDUCATION_LEVEL", "EXPECTED_GRADUATION_YEAR", "FACULTY",
+            "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST",
+            "RUN", "CV_SOURCE", "JFWS_SOURCE", "PDF_SOURCE"
+        ]
         
-        # Get header row to find column indices
-        headers = [cell.value for cell in sheet[1]]
+        # Only include columns that exist in the data
+        ordered_columns = [col for col in preferred_order if col in df.columns]
         
-        # Apply highlighting based on the highlighting dict
-        for row_idx, fields_to_highlight in highlighting.items():
-            # Excel rows are 1-indexed and we need to account for the header row
-            excel_row = row_idx + 2
-            for field_name in fields_to_highlight:
-                if field_name in headers:
-                    col_idx = headers.index(field_name) + 1
-                    cell = sheet.cell(row=excel_row, column=col_idx)
-                    cell.fill = highlight_fill
-                    cell.font = Font(bold=True)
+        # Add any remaining columns that weren't in preferred_order
+        remaining_columns = [col for col in df.columns if col not in preferred_order]
+        ordered_columns.extend(remaining_columns)
         
-        # Save the workbook
-        workbook.save(pdf_specific_file_path)
-        print(f"Applied highlighting to {len(highlighting)} rows")
+        # Reorder DataFrame columns
+        if ordered_columns:
+            df = df[ordered_columns]
+        
+        # Export to Excel with highlighting
+        with pd.ExcelWriter(pdf_specific_file_path, engine="openpyxl") as writer:
+            df.to_excel(writer, index=False, sheet_name="CV Data")
+            
+            # Apply highlighting where needed
+            workbook = writer.book
+            worksheet = writer.sheets["CV Data"]
+            
+            # Define highlight style (light yellow background)
+            highlight_fill = PatternFill(start_color="FFFF99", end_color="FFFF99", fill_type="solid")
+            
+            # Adjust column width for better readability
+            for column in worksheet.columns:
+                max_length = 0
+                column_letter = column[0].column_letter
+                for cell in column:
+                    try:
+                        if len(str(cell.value)) > max_length:
+                            max_length = len(str(cell.value))
+                    except:
+                        pass
+                adjusted_width = (max_length + 2) if max_length < 50 else 50
+                worksheet.column_dimensions[column_letter].width = adjusted_width
+            
+            # Add highlighting based on the highlighting dict
+            for row_idx, field_dict in highlighting.items():
+                # Add 2 to row_idx (1 for header, 1 for 0-indexing)
+                excel_row = row_idx + 2
+                
+                for field, should_highlight in field_dict.items():
+                    if should_highlight:
+                        # Find column index for this field
+                        try:
+                            col_idx = ordered_columns.index(field) + 1  # Add 1 for Excel's 1-based indexing
+                            cell = worksheet.cell(row=excel_row, column=col_idx)
+                            cell.fill = highlight_fill
+                        except ValueError:
+                            print(f"Warning: Could not find column for field '{field}'")
+        
+        print(f"Merged Excel file created: {pdf_specific_file_path}")
+        return str(pdf_specific_file_path)
         
     except Exception as e:
-        print(f"Error applying highlighting to Excel file '{pdf_specific_file_path}': {e}")
-            
-    print(f"Excel file created: {pdf_specific_file_path}")
-    # Return the path to the PDF-specific Excel file
-    return str(pdf_specific_file_path)
+        print(f"Error creating merged Excel file: {e}")
+        import traceback
+        traceback.print_exc()
+        return f"Error creating merged Excel file: {e}"
 
 
 # ========== MAIN WORKFLOW FUNCTIONS ==========
