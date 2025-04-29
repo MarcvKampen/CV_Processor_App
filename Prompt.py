@@ -155,6 +155,8 @@ EXTRACTION FIELDS (10 required fields):
    - English (Native): Accept as "English."
    - French (Mother tongue): Accept as "French."
    - Dutch (C2 level): Accept as "Dutch."
+   - Spanish (C2 level): Classify as "Other."
+   - Urdu (Native): Classify as "Other."
 
    Tips for Accuracy:
    - Keywords: Search for keywords such as "Native speaker," "Fluent," or "Bilingual" in conjunction with the language.
