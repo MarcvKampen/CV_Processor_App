@@ -147,16 +147,14 @@ EXTRACTION FIELDS (10 required fields):
    - Location: Focus on the "Skills" or "Languages" section of the CV.
    - Indicators: Look for terms like "Mother tongue," "Native," or "C2 level" to identify the native language.
    - Acceptable Languages: Only accept "Dutch," "French," "English," or "Other."
-   - If the language is not explicitly listed as Dutch, French, or English, classify it as "Other."
-   - If no language is specified or if the language does not meet the criteria, use "Other."
+   - Make sure to accept only: "Dutch", "French", "English", "Other"!!!!!!!
+   - If the language is not "Dutch", "French", "English", then use "Other."
    - Proficiency Level: Note that C1 level is not sufficient for native classification; only C2 or explicit terms like "Native" or "Mother tongue" are acceptable.
 
    Examples:
    - English (Native): Accept as "English."
    - French (Mother tongue): Accept as "French."
    - Dutch (C2 level): Accept as "Dutch."
-   - Spanish (C1 level): Classify as "Other."
-   - Urdu (Native): Classify as "Other."
 
    Tips for Accuracy:
    - Keywords: Search for keywords such as "Native speaker," "Fluent," or "Bilingual" in conjunction with the language.
