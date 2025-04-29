@@ -34,27 +34,58 @@ def ensure_temp_dir():
     try:
         # Try creating the primary temp directory
         os.makedirs(CUSTOM_TEMP_DIR, exist_ok=True)
-        os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
-        return CUSTOM_TEMP_DIR
-    except Exception as e:
-        print(f"Warning: Could not create temp directory {CUSTOM_TEMP_DIR}: {e}")
-        
-        # Try creating a folder in the system temp directory
+        # Test write permissions by creating a test file
+        test_file = CUSTOM_TEMP_DIR / f"test_write_{time.time()}.tmp"
         try:
-            fallback_dir = Path(tempfile.gettempdir()) / "cv_processor_temp"
-            os.makedirs(fallback_dir, exist_ok=True)
-            CUSTOM_TEMP_DIR = fallback_dir  # Update the global variable
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            # Directory is writable, set it as temp directory
             os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
-            print(f"Using fallback temp directory: {CUSTOM_TEMP_DIR}")
+            return CUSTOM_TEMP_DIR
+        except Exception as write_error:
+            print(f"Warning: Directory {CUSTOM_TEMP_DIR} exists but is not writable: {write_error}")
+            raise  # Re-raise to trigger fallback
+    except Exception as e:
+        print(f"Warning: Could not create or write to temp directory {CUSTOM_TEMP_DIR}: {e}")
+        
+        # Try creating a folder in the user's home directory
+        try:
+            home_dir = Path.home() / "cv_processor_temp"
+            os.makedirs(home_dir, exist_ok=True)
+            # Test write permissions
+            test_file = home_dir / f"test_write_{time.time()}.tmp"
+            with open(test_file, 'w') as f:
+                f.write('test')
+            os.remove(test_file)
+            CUSTOM_TEMP_DIR = home_dir  # Update the global variable
+            os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+            print(f"Using home directory temp folder: {CUSTOM_TEMP_DIR}")
             return CUSTOM_TEMP_DIR
         except Exception as e2:
-            print(f"Warning: Could not create fallback directory: {e2}")
+            print(f"Warning: Could not create or use home directory: {e2}")
             
-            # Last resort: use the system temp directory directly
-            CUSTOM_TEMP_DIR = Path(tempfile.gettempdir())
-            os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
-            print(f"Using system temp directory: {CUSTOM_TEMP_DIR}")
-            return CUSTOM_TEMP_DIR
+            # Try creating a folder in the system temp directory
+            try:
+                fallback_dir = Path(tempfile.gettempdir()) / "cv_processor_temp"
+                os.makedirs(fallback_dir, exist_ok=True)
+                # Test write permissions
+                test_file = fallback_dir / f"test_write_{time.time()}.tmp"
+                with open(test_file, 'w') as f:
+                    f.write('test')
+                os.remove(test_file)
+                CUSTOM_TEMP_DIR = fallback_dir  # Update the global variable
+                os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+                print(f"Using system temp directory folder: {CUSTOM_TEMP_DIR}")
+                return CUSTOM_TEMP_DIR
+            except Exception as e3:
+                print(f"Warning: Could not create fallback directory: {e3}")
+                
+                # Last resort: use the system temp directory directly
+                CUSTOM_TEMP_DIR = Path(tempfile.gettempdir())
+                os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+                print(f"Using system temp directory: {CUSTOM_TEMP_DIR}")
+                return CUSTOM_TEMP_DIR
 
 # Initialize the temp directory when the module is loaded
 ensure_temp_dir()
@@ -1439,7 +1470,8 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
     Returns a list of temporary PDF file paths.
     """
     # Ensure the temporary directory exists before proceeding
-    ensure_temp_dir()
+    temp_dir = ensure_temp_dir()
+    print(f"Using temporary directory: {temp_dir}")
     
     import tempfile
     import pikepdf
@@ -1472,12 +1504,15 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
                     new_pdf = pikepdf.Pdf.new()
                     for page_num in pages:
                         new_pdf.pages.append(pdf.pages[page_num])
-                    # Make sure the temp directory still exists
-                    temp_dir = ensure_temp_dir()
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(temp_dir)) as tmpf:
-                        new_pdf.save(tmpf.name)
-                        chunk_files.append(tmpf.name)
-                        print(f"[pikepdf] Successfully wrote chunk {idx+1} to {tmpf.name}")
+                        
+                    # Generate a unique filename with a timestamp to avoid conflicts
+                    chunk_filename = f"chunk_{idx+1}_{int(time.time())}_{random.randint(1000, 9999)}.pdf"
+                    output_path = temp_dir / chunk_filename
+                    
+                    # Save directly to the final path without temp file intermediate step
+                    new_pdf.save(str(output_path))
+                    chunk_files.append(str(output_path))
+                    print(f"[pikepdf] Successfully wrote chunk {idx+1} to {output_path}")
                 except Exception as e:
                     print(f"[pikepdf] Error writing chunk {idx+1}: {e}. Skipping this chunk.")
     except Exception as e:
@@ -1498,12 +1533,15 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
                     except Exception as page_e:
                         print(f"[PyPDF2] Error adding page {page_num} to chunk {idx+1}: {page_e}. Skipping this page.")
                 try:
-                    # Make sure the temp directory still exists before PyPDF2 fallback
-                    temp_dir = ensure_temp_dir()
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(temp_dir)) as tmpf:
-                        writer.write(tmpf)
-                        chunk_files.append(tmpf.name)
-                        print(f"[PyPDF2] Successfully wrote chunk {idx+1} to {tmpf.name}")
+                    # Generate a unique filename with a timestamp to avoid conflicts
+                    chunk_filename = f"chunk_{idx+1}_{int(time.time())}_{random.randint(1000, 9999)}.pdf"
+                    output_path = temp_dir / chunk_filename
+                    
+                    # Write directly to the final path
+                    with open(output_path, 'wb') as f:
+                        writer.write(f)
+                    chunk_files.append(str(output_path))
+                    print(f"[PyPDF2] Successfully wrote chunk {idx+1} to {output_path}")
                 except Exception as write_e:
                     print(f"[PyPDF2] Error writing chunk {idx+1}: {write_e}. Skipping this chunk.")
         except Exception as pypdf_e:
