@@ -13,13 +13,51 @@ from datetime import datetime
 import openpyxl # Required by pandas for Excel writing
 import PyPDF2  # For splitting PDF files
 import cv_separator
+import tempfile
 
 # Set a custom temp directory for all temp files (fixes Windows permission issues)
-import tempfile
-# CUSTOM_TEMP_DIR = r'C:\Temp' # Using project-local temp dir instead
+# Define the directory path but don't create it yet
 CUSTOM_TEMP_DIR = Path(__file__).parent / "temp_chunks"
-os.makedirs(CUSTOM_TEMP_DIR, exist_ok=True)
-os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR) # Ensure it's a string
+
+# Add a function to ensure the temp directory exists
+def ensure_temp_dir():
+    """
+    Ensure the temporary directory exists, creating it if necessary.
+    This function can be called any time before creating temp files.
+    If the original directory cannot be created, it falls back to alternatives.
+    
+    Returns:
+        Path: The path to the temp directory that was successfully created
+    """
+    global CUSTOM_TEMP_DIR
+    
+    try:
+        # Try creating the primary temp directory
+        os.makedirs(CUSTOM_TEMP_DIR, exist_ok=True)
+        os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+        return CUSTOM_TEMP_DIR
+    except Exception as e:
+        print(f"Warning: Could not create temp directory {CUSTOM_TEMP_DIR}: {e}")
+        
+        # Try creating a folder in the system temp directory
+        try:
+            fallback_dir = Path(tempfile.gettempdir()) / "cv_processor_temp"
+            os.makedirs(fallback_dir, exist_ok=True)
+            CUSTOM_TEMP_DIR = fallback_dir  # Update the global variable
+            os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+            print(f"Using fallback temp directory: {CUSTOM_TEMP_DIR}")
+            return CUSTOM_TEMP_DIR
+        except Exception as e2:
+            print(f"Warning: Could not create fallback directory: {e2}")
+            
+            # Last resort: use the system temp directory directly
+            CUSTOM_TEMP_DIR = Path(tempfile.gettempdir())
+            os.environ['TMP'] = os.environ['TEMP'] = str(CUSTOM_TEMP_DIR)
+            print(f"Using system temp directory: {CUSTOM_TEMP_DIR}")
+            return CUSTOM_TEMP_DIR
+
+# Initialize the temp directory when the module is loaded
+ensure_temp_dir()
 
 # API key (Keep securely managed - consider environment variables)
 API_KEY = ""  # Will be set by the application
@@ -212,6 +250,9 @@ def process_pdf(pdf_file: Path):
         if client is None:
             raise ValueError("No API key provided. Please set a valid Mistral API key first.")
     
+    # Ensure temp directory exists before processing
+    ensure_temp_dir()
+    
     cache_dir = Path("ocr_cache") # Store cache in a sub-directory
     cache_dir.mkdir(exist_ok=True)
     cache_file = cache_dir / f"{pdf_file.stem}_ocr_text_cache.txt"
@@ -322,10 +363,10 @@ def process_pdf(pdf_file: Path):
                 with open(backup_file, "w", encoding="utf-8") as f:
                     f.write(all_pages_text)
             except Exception as e2:
-                print(f"Warning: Could not write cache or backup file: {e2}")
-            print("First 500 characters sample:")
-            print(all_pages_text[:500] + "..." if len(all_pages_text) > 500 else all_pages_text)
-            print("\n===== OCR TEXT EXTRACTION COMPLETE =====\n")
+                print(f"\n\nERROR during OCR processing: {e2}")
+                import traceback
+                traceback.print_exc()
+                raise
         except Exception as e2:
             print(f"\n\nERROR during OCR processing: {e2}")
             import traceback
@@ -816,7 +857,7 @@ def export_to_excel(cv_data, pdf_file, cv_book_source="", jfws_source="", mode="
         cv_book_source (str): CV Book source for metadata
         jfws_source (str): JFWS source for metadata
         mode (str): Mode identifier for filename (standard, run1, run2, etc.)
-    
+        
     Returns:
         str: Path to the created Excel file
     """
@@ -953,7 +994,7 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
             
         # Create key from name combination
         return f"{first_name}|{last_name}"
-    
+            
     # Build lookup map for run 2 data
     for cv in cv_data2:
         if not isinstance(cv, dict):
@@ -962,7 +1003,7 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
         key = create_match_key(cv)
         if key:
             cv_data2_map[key] = cv
-    
+            
     # Prepare merged data and highlighting info
     merged_data = []
     highlighting = {}  # Maps row index to fields that should be highlighted
@@ -1016,9 +1057,9 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
         merged_cv["JFWS_SOURCE"] = jfws_source
         merged_cv["PDF_SOURCE"] = pdf_file.stem
         merged_cv["RUN"] = "1" if key1 not in cv_data2_map else "1+2"  # Track which runs found this CV
-        
+            
         merged_data.append(merged_cv)
-    
+        
     # Check for cancellation
     if check_cancelled():
         print("Processing cancelled during merge")
@@ -1051,7 +1092,7 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
     try:
         # Convert to DataFrame
         df = pd.DataFrame(merged_data)
-        
+    
         # Reorder columns for better readability
         preferred_order = [
             "FIRST_NAME", "LAST_NAME", "EMAIL", "PHONE_NUMBER",
@@ -1059,14 +1100,14 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
             "NATIVE_LANGUAGE", "LINKEDIN_PROFILE_URL", "POTENTIAL_INTEREST",
             "RUN", "CV_SOURCE", "JFWS_SOURCE", "PDF_SOURCE"
         ]
-        
+    
         # Only include columns that exist in the data
         ordered_columns = [col for col in preferred_order if col in df.columns]
-        
+    
         # Add any remaining columns that weren't in preferred_order
         remaining_columns = [col for col in df.columns if col not in preferred_order]
         ordered_columns.extend(remaining_columns)
-        
+    
         # Reorder DataFrame columns
         if ordered_columns:
             df = df[ordered_columns]
@@ -1109,10 +1150,10 @@ def compare_and_merge_results(cv_data1, cv_data2, pdf_file, cv_book_source="", j
                             cell.fill = highlight_fill
                         except ValueError:
                             print(f"Warning: Could not find column for field '{field}'")
-        
+            
         print(f"Merged Excel file created: {pdf_specific_file_path}")
         return str(pdf_specific_file_path)
-        
+    
     except Exception as e:
         print(f"Error creating merged Excel file: {e}")
         import traceback
@@ -1135,6 +1176,9 @@ def process_cvs_with_verification(pdf_file, cv_book_source="", jfws_source=""):
     Returns:
         str: Path to the Excel file with merged results.
     """
+    # Ensure temp directory exists before processing
+    ensure_temp_dir()
+    
     # Check for cancellation before starting
     if check_cancelled():
         print("Processing cancelled before starting")
@@ -1208,6 +1252,9 @@ def process_cvs(pdf_file, cv_book_source="", jfws_source=""):
     Returns:
         str: Path to the Excel file with results.
     """
+    # Ensure temp directory exists before processing
+    ensure_temp_dir()
+    
     # Check for cancellation
     if check_cancelled():
         print("Processing cancelled before starting")
@@ -1391,6 +1438,9 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
     Uses cv_separator to detect CV boundaries, then pikepdf for robust splitting (fallback to PyPDF2).
     Returns a list of temporary PDF file paths.
     """
+    # Ensure the temporary directory exists before proceeding
+    ensure_temp_dir()
+    
     import tempfile
     import pikepdf
     chunk_files = []
@@ -1422,8 +1472,9 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
                     new_pdf = pikepdf.Pdf.new()
                     for page_num in pages:
                         new_pdf.pages.append(pdf.pages[page_num])
-                    # Use the custom temp dir explicitly if needed, though environment var should work
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(CUSTOM_TEMP_DIR)) as tmpf:
+                    # Make sure the temp directory still exists
+                    temp_dir = ensure_temp_dir()
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(temp_dir)) as tmpf:
                         new_pdf.save(tmpf.name)
                         chunk_files.append(tmpf.name)
                         print(f"[pikepdf] Successfully wrote chunk {idx+1} to {tmpf.name}")
@@ -1447,7 +1498,9 @@ def split_pdf_by_cv(pdf_file, cv_per_chunk=5):
                     except Exception as page_e:
                         print(f"[PyPDF2] Error adding page {page_num} to chunk {idx+1}: {page_e}. Skipping this page.")
                 try:
-                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(CUSTOM_TEMP_DIR)) as tmpf:
+                    # Make sure the temp directory still exists before PyPDF2 fallback
+                    temp_dir = ensure_temp_dir()
+                    with tempfile.NamedTemporaryFile(delete=False, suffix=f'_chunk{idx+1}.pdf', dir=str(temp_dir)) as tmpf:
                         writer.write(tmpf)
                         chunk_files.append(tmpf.name)
                         print(f"[PyPDF2] Successfully wrote chunk {idx+1} to {tmpf.name}")

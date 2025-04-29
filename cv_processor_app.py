@@ -722,7 +722,7 @@ class CVProcessorApp(QMainWindow):
         action_layout = QHBoxLayout()
         action_layout.setSpacing(8)  # Further reduced spacing
         action_layout.setContentsMargins(0, 5, 0, 5)  # Minimal vertical padding
-        
+
         self.process_button = QPushButton("Process CV File")
         self.process_button.setMinimumHeight(36)  # Even smaller height
         self.process_button.setMinimumWidth(140)  # Smaller width
@@ -795,7 +795,7 @@ class CVProcessorApp(QMainWindow):
 
         # Set central widget
         self.setCentralWidget(main_container)
-        
+
     def save_api_key(self):
         """Save API key from the input field and persist it."""
         key = self.api_key_input.text().strip()
@@ -901,7 +901,7 @@ class CVProcessorApp(QMainWindow):
     def on_file_saved(self, file_path):
         """Handle notification that a file was saved"""
         pass  # No logging needed
-    
+
     def toggle_ui(self, enabled):
         """Toggle UI elements enabled/disabled state"""
         # Main controls
@@ -1183,7 +1183,7 @@ if __name__ == "__main__":
     
     # Apply modern application style
     set_application_style(app)
-    
+
     # Ensure resource directories exist
     resources_dir = os.path.join(os.path.dirname(__file__), 'resources')
     os.makedirs(resources_dir, exist_ok=True)
@@ -1195,7 +1195,7 @@ if __name__ == "__main__":
             app.setAttribute(Qt.ApplicationAttribute.AA_EnableHighDpiScaling)
         except Exception as e:
             print(f"Could not set high DPI settings: {e}")
-    
+
     # Create and show the main window
     window = CVProcessorApp()
     window.show()
